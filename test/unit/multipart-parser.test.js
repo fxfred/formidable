@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs')
 const { MultipartParser } = require('../../src/index');
 
 test('on constructor', () => {
@@ -50,6 +51,21 @@ test('initWithBoundary failing', () => {
 
   parser.write(buffer);
   expect(parser.bufferLength).toBe(5);
+});
+
+test('header with error', (done) => {
+  const parser = new MultipartParser();
+  const boundary = 'StratusRETS-XYZZY';
+
+  parser.on('error', (e) => {
+    expect(e).toBe('Multipart parser error: HEADER_FIELD');
+    done();
+  });
+
+  const buffer = fs.readFileSync(__dirname + '/test-data/multipart-error-header');
+  parser.initWithBoundary(boundary);
+  parser.write(buffer);
+  parser.end();
 });
 
 test('on .end() throwing', () => {
