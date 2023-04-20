@@ -139,6 +139,7 @@ class MultipartParser extends Transform {
       c = buffer[i];
       switch (state) {
         case STATE.PARSER_UNINITIALIZED:
+          done('Multipart parser error: PARSER_UNINITIALIZED');
           return i;
         case STATE.START:
           index = 0;
@@ -148,6 +149,7 @@ class MultipartParser extends Transform {
             if (c === HYPHEN) {
               flags |= FBOUNDARY.LAST_BOUNDARY;
             } else if (c !== CR) {
+              done('Multipart parser error: START_BOUNDARY');
               return i;
             }
             index++;
@@ -162,6 +164,7 @@ class MultipartParser extends Transform {
               this._handleCallback('partBegin');
               state = STATE.HEADER_FIELD_START;
             } else {
+              done('Multipart parser error: START_BOUNDARY');
               return i;
             }
             break;
@@ -193,6 +196,7 @@ class MultipartParser extends Transform {
           if (c === COLON) {
             if (index === 1) {
               // empty header field
+              done('Multipart parser error: HEADER_FIELD');
               return i;
             }
             dataCallback('headerField', true);
@@ -202,6 +206,7 @@ class MultipartParser extends Transform {
 
           cl = lower(c);
           if (cl < A || cl > Z) {
+            done('Multipart parser error: HEADER_FIELD');
             return i;
           }
           break;
@@ -221,12 +226,14 @@ class MultipartParser extends Transform {
           break;
         case STATE.HEADER_VALUE_ALMOST_DONE:
           if (c !== LF) {
+            done('Multipart parser error: HEADER_VALUE_ALMOST_DONE');
             return i;
           }
           state = STATE.HEADER_FIELD_START;
           break;
         case STATE.HEADERS_ALMOST_DONE:
           if (c !== LF) {
+            done('Multipart parser error: HEADERS_ALMOST_DONE');
             return i;
           }
 
@@ -314,6 +321,7 @@ class MultipartParser extends Transform {
         case STATE.END:
           break;
         default:
+          done('Multipart parser error: unknown state');
           return i;
       }
     }
