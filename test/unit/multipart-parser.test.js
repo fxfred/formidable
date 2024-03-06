@@ -1,4 +1,6 @@
 import { MultipartParser } from '../../src/index.js';
+const fs = require('fs')
+
 
 test('on constructor', () => {
   const parser = new MultipartParser();
@@ -68,4 +70,20 @@ test('on .end() successful', () => {
 
   const res = parser.end();
   expect(res.state).toBe(12);
+});
+
+// TODO: need fix error val
+test('header with error', (done) => {
+  const parser = new MultipartParser();
+  const boundary = 'StratusRETS-XYZZY';
+
+  parser.on('error', (e) => {
+    expect(e).toBe('Multipart parser error: HEADER_FIELD');
+    done();
+  });
+
+  const buffer = fs.readFileSync(__dirname + '/test-data/multipart-error-header');
+  parser.initWithBoundary(boundary);
+  parser.write(buffer);
+  parser.end();
 });
