@@ -1,5 +1,29 @@
 # Changelog
 
+### 3.5.1
+
+ * fix: ([#945](https://github.com/node-formidable/formidable/pull/945)) multipart parser fix: flush or fail always (don't hang)
+
+
+### 3.5.0
+
+ * feature: ([#944](https://github.com/node-formidable/formidable/pull/944)) Dual package: Can be imported as ES module and required as commonjs module
+
+
+### 3.4.0
+
+ * feature: ([#940](https://github.com/node-formidable/formidable/pull/940)) form.parse returns a promise if no callback is provided
+ * it resolves with an array `[fields, files]`
+
+
+### 3.3.2
+
+ * feature: ([#855](https://github.com/node-formidable/formidable/pull/855)) add options.createDirsFromUploads, see README for usage
+ * form.parse is an async function (ignore the promise)
+ * benchmarks: add e2e becnhmark with as many request as possible per second
+    * npm run to display all the commands
+ * mark as latest on npm
+
 ### 3.2.5
 
  * fix: ([#881](https://github.com/node-formidable/formidable/pull/881)) fail earlier when maxFiles is exceeded

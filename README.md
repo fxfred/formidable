@@ -68,6 +68,8 @@ rules, like enabling Two-Factor Auth in your npm and GitHub accounts.
 
 ## Install
 
+This package is a dual ESM/commonjs package.
+
 This project requires `Node.js >= 10.13`. Install it using
 [yarn](https://yarnpkg.com) or [npm](https://npmjs.com).<br /> _We highly
 recommend to use Yarn when you think to contribute to this project._
@@ -77,14 +79,14 @@ already be included. Check the examples below and the [examples/](https://github
 
 ```
 # v2
-npm install formidable
 npm install formidable@v2
 
 # v3
+npm install formidable
 npm install formidable@v3
 ```
 
-_**Note:** In the near future v3 will be published on the `latest` NPM dist-tag. Future not ready releases will be published on `*-next` dist-tags for the corresponding version._
+_**Note:** Future not ready releases will be published on `*-next` dist-tags for the corresponding version._
 
 
 ## Examples
@@ -100,25 +102,26 @@ Parse an incoming file upload, with the
 import http from 'node:http';
 import formidable, {errors as formidableErrors} from 'formidable';
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   if (req.url === '/api/upload' && req.method.toLowerCase() === 'post') {
     // parse a file upload
     const form = formidable({});
-
-    form.parse(req, (err, fields, files) => {
-      if (err) {
+    let fields;
+    let files;
+    try {
+        [fields, files] = await form.parse(req);
+    } catch (err) {
         // example to check for a very specific error
         if (err.code === formidableErrors.maxFieldsExceeded) {
 
         }
+        console.error(err);
         res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
         res.end(String(err));
         return;
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ fields, files }, null, 2));
-    });
-
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ fields, files }, null, 2));
     return;
   }
 
@@ -342,7 +345,9 @@ See it's defaults in [src/Formidable.js DEFAULT_OPTIONS](./src/Formidable.js)
   newFilename. Must return a string. Will be joined with options.uploadDir.
 
 - `options.filter` **{function}** - default function that always returns true.
-  Use it to filter files before they are uploaded. Must return a boolean.
+  Use it to filter files before they are uploaded. Must return a boolean. Will not make the form.parse error
+
+- `options.createDirsFromUploads` **{boolean}** - default false. If true, makes direct folder uploads possible. Use `<input type="file" name="folders" webkitdirectory directory multiple>` to create a form to upload folders. Has to be used with the options `options.uploadDir` and `options.filename` where `options.filename` has to return a string with the character `/` for folders to be created. The base will be `options.uploadDir`.
 
 
 #### `options.filename`  **{function}** function (name, ext, part, form) -> string
@@ -368,7 +373,7 @@ form.bytesExpected;
 
 #### `options.filter`  **{function}** function ({name, originalFilename, mimetype}) -> boolean
 
-**Note:** use an outside variable to cancel all uploads upon the first error 
+Behaves like Array.filter: Returning false will simply ignore the file and go to the next.
 
 ```js
 const options = {
@@ -379,11 +384,29 @@ const options = {
 };
 ```
 
+**Note:** use an outside variable to cancel all uploads upon the first error
 
-### .parse(request, callback)
+**Note:** use form.emit('error') to make form.parse error
 
-Parses an incoming Node.js `request` containing form data. If `callback` is
-provided, all fields and files are collected and passed to the callback.
+```js
+let cancelUploads = false;// create variable at the same scope as form
+const options = {
+  filter: function ({name, originalFilename, mimetype}) {
+    // keep only images
+    const valid = mimetype && mimetype.includes("image");
+    if (!valid) {
+      form.emit('error', new formidableErrors.default('invalid type', 0, 400)); // optional make form.parse error
+      cancelUploads = true; //variable to make filter return false after the first problem
+    }
+    return valid && !cancelUploads;
+  }
+};
+```
+
+
+### .parse(request, ?callback)
+
+Parses an incoming Node.js `request` containing form data. If `callback` is not provided a promise is returned.
 
 ```js
 const form = formidable({ uploadDir: __dirname });
@@ -392,6 +415,9 @@ form.parse(req, (err, fields, files) => {
   console.log('fields:', fields);
   console.log('files:', files);
 });
+
+// with Promise
+const [fields, files] = await form.parse(req);
 ```
 
 You may overwrite this method if you are interested in directly accessing the
